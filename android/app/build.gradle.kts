@@ -3,7 +3,6 @@ plugins {
     id("kotlin-android")
     id("dev.flutter.flutter-gradle-plugin")
     id("com.google.gms.google-services")  // ADD THIS LINE
-
 }
 
 android {
@@ -30,7 +29,7 @@ android {
         targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        multiDexEnabled = true
+        multiDexEnabled = true  // ADD THIS LINE
     }
 
     buildTypes {
@@ -44,8 +43,8 @@ flutter {
     source = "../.."
 }
 
-
 dependencies {
-    implementation 'com.google.firebase:firebase-bom:32.7.0'
-    implementation 'androidx.multidex:multidex:2.0.1'
+    // CORRECT KOTLIN DSL SYNTAX 👇
+    implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
+    implementation("androidx.multidex:multidex:2.0.1")
 }
