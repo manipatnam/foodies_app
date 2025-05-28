@@ -43,3 +43,20 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Environment
+.env
+
+# Build files
+build/
+.dart_tool/
+
+# IDE files
+.vscode/
+.idea/
+*.iml
+
+# Platform files
+android/.gradle/
+ios/Pods/
+ios/Runner.xcworkspace/
