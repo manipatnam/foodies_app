@@ -1,20 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 import '../models/place_result.dart';
-import '../widgets/place_card.dart';
-import '../widgets/place_details_sheet.dart';
 import '../services/places_service.dart';
+import '../widgets/place_details_sheet.dart';
 
-class NearbyScreen extends StatefulWidget {
+class MapScreen extends StatefulWidget {  // Changed from NearbyScreen to MapScreen
   final LocationData? currentLocation;
   
-  const NearbyScreen({super.key, this.currentLocation});
+  const MapScreen({super.key, this.currentLocation});  // Changed from NearbyScreen to MapScreen
 
   @override
-  State<NearbyScreen> createState() => _NearbyScreenState();
+  State<MapScreen> createState() => _MapScreenState();  // Changed from _NearbyScreenState to _MapScreenState
 }
 
-class _NearbyScreenState extends State<NearbyScreen> {
+class _MapScreenState extends State<MapScreen> {  // Changed from _NearbyScreenState to _MapScreenState
+  GoogleMapController? _controller;
+  Set<Marker> _markers = {};
   List<PlaceResult> _nearbyPlaces = [];
   bool _isLoading = false;
   String _selectedCategory = 'restaurant';
@@ -28,15 +30,16 @@ class _NearbyScreenState extends State<NearbyScreen> {
   };
 
   @override
-  void didUpdateWidget(NearbyScreen oldWidget) {
+  void didUpdateWidget(MapScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     // Automatically refresh places when location changes
     if (widget.currentLocation != null && 
         (oldWidget.currentLocation == null ||
          oldWidget.currentLocation!.latitude != widget.currentLocation!.latitude ||
          oldWidget.currentLocation!.longitude != widget.currentLocation!.longitude)) {
-      print('Location changed - refreshing nearby places');
+      print('Location changed - refreshing map');
       _loadNearbyPlaces();
+      _updateCameraPosition();
     }
   }
 
@@ -62,24 +65,109 @@ class _NearbyScreenState extends State<NearbyScreen> {
         type: _selectedCategory,
       );
 
+      await _updateMarkers(places);
+
       setState(() {
         _nearbyPlaces = places;
         _isLoading = false;
       });
     } catch (e) {
+      print('Error loading places: $e');
       setState(() {
         _isLoading = false;
       });
     }
   }
 
+  Future<void> _updateMarkers(List<PlaceResult> places) async {
+    final Set<Marker> markers = {};
+
+    // Add user location marker
+    if (widget.currentLocation != null) {
+      markers.add(
+        Marker(
+          markerId: const MarkerId('user_location'),
+          position: LatLng(
+            widget.currentLocation!.latitude!,
+            widget.currentLocation!.longitude!,
+          ),
+          infoWindow: const InfoWindow(
+            title: 'Your Location',
+            snippet: 'You are here',
+          ),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+        ),
+      );
+    }
+
+    // Add place markers
+    for (var place in places) {
+      markers.add(
+        Marker(
+          markerId: MarkerId(place.placeId),
+          position: LatLng(place.latitude, place.longitude),
+          infoWindow: InfoWindow(
+            title: place.name,
+            snippet: '${place.rating}⭐ • ${place.vicinity}',
+          ),
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+            place.isOpen ? BitmapDescriptor.hueGreen : BitmapDescriptor.hueRed,
+          ),
+          onTap: () => _showPlaceDetails(place),
+        ),
+      );
+    }
+
+    setState(() {
+      _markers = markers;
+    });
+  }
+
+  void _updateCameraPosition() {
+    if (_controller != null && widget.currentLocation != null) {
+      _controller!.animateCamera(
+        CameraUpdate.newLatLng(
+          LatLng(
+            widget.currentLocation!.latitude!,
+            widget.currentLocation!.longitude!,
+          ),
+        ),
+      );
+    }
+  }
+
+  void _showPlaceDetails(PlaceResult place) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => PlaceDetailsSheet(place: place),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Nearby Places'),
+        title: const Text('Map View'),
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
+        actions: [
+          if (_isLoading)
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+            ),
+        ],
       ),
       body: widget.currentLocation == null
           ? const Center(
@@ -124,36 +212,56 @@ class _NearbyScreenState extends State<NearbyScreen> {
                   ),
                 ),
                 
-                // Places List
+                // Google Map
                 Expanded(
-                  child: _isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : _nearbyPlaces.isEmpty
-                          ? const Center(
-                              child: Text('No places found nearby'),
-                            )
-                          : ListView.builder(
-                              padding: const EdgeInsets.all(16),
-                              itemCount: _nearbyPlaces.length,
-                              itemBuilder: (context, index) {
-                                return PlaceCard(
-                                  place: _nearbyPlaces[index],
-                                  onTap: () {
-                                    showModalBottomSheet(
-                                      context: context,
-                                      isScrollControlled: true,
-                                      shape: const RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                                      ),
-                                      builder: (context) => PlaceDetailsSheet(place: _nearbyPlaces[index]),
-                                    );
-                                  },
-                                );
-                              },
-                            ),
+                  child: GoogleMap(
+                    onMapCreated: (GoogleMapController controller) {
+                      _controller = controller;
+                    },
+                    initialCameraPosition: CameraPosition(
+                      target: LatLng(
+                        widget.currentLocation!.latitude!,
+                        widget.currentLocation!.longitude!,
+                      ),
+                      zoom: 15.0,
+                    ),
+                    markers: _markers,
+                    myLocationEnabled: true,
+                    myLocationButtonEnabled: true,
+                    mapType: MapType.normal,
+                    zoomControlsEnabled: true,
+                    compassEnabled: true,
+                    trafficEnabled: false,
+                    buildingsEnabled: true,
+                    indoorViewEnabled: true,
+                    onTap: (LatLng position) {
+                      // Close any open info windows when tapping on map
+                    },
+                  ),
                 ),
               ],
             ),
+      floatingActionButton: widget.currentLocation != null
+          ? FloatingActionButton(
+              onPressed: () {
+                if (_controller != null) {
+                  _controller!.animateCamera(
+                    CameraUpdate.newCameraPosition(
+                      CameraPosition(
+                        target: LatLng(
+                          widget.currentLocation!.latitude!,
+                          widget.currentLocation!.longitude!,
+                        ),
+                        zoom: 15.0,
+                      ),
+                    ),
+                  );
+                }
+              },
+              backgroundColor: Theme.of(context).primaryColor,
+              child: const Icon(Icons.my_location, color: Colors.white),
+            )
+          : null,
     );
   }
 }
