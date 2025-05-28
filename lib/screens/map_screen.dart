@@ -5,16 +5,16 @@ import '../models/place_result.dart';
 import '../services/places_service.dart';
 import '../widgets/place_details_sheet.dart';
 
-class MapScreen extends StatefulWidget {  // Changed from NearbyScreen to MapScreen
+class MapScreen extends StatefulWidget {
   final LocationData? currentLocation;
   
-  const MapScreen({super.key, this.currentLocation});  // Changed from NearbyScreen to MapScreen
+  const MapScreen({super.key, this.currentLocation});
 
   @override
-  State<MapScreen> createState() => _MapScreenState();  // Changed from _NearbyScreenState to _MapScreenState
+  State<MapScreen> createState() => _MapScreenState();
 }
 
-class _MapScreenState extends State<MapScreen> {  // Changed from _NearbyScreenState to _MapScreenState
+class _MapScreenState extends State<MapScreen> {
   GoogleMapController? _controller;
   Set<Marker> _markers = {};
   List<PlaceResult> _nearbyPlaces = [];
@@ -227,7 +227,7 @@ class _MapScreenState extends State<MapScreen> {  // Changed from _NearbyScreenS
                     ),
                     markers: _markers,
                     myLocationEnabled: true,
-                    myLocationButtonEnabled: true,
+                    myLocationButtonEnabled: true, // This provides the Google location button
                     mapType: MapType.normal,
                     zoomControlsEnabled: true,
                     compassEnabled: true,
@@ -241,27 +241,7 @@ class _MapScreenState extends State<MapScreen> {  // Changed from _NearbyScreenS
                 ),
               ],
             ),
-      floatingActionButton: widget.currentLocation != null
-          ? FloatingActionButton(
-              onPressed: () {
-                if (_controller != null) {
-                  _controller!.animateCamera(
-                    CameraUpdate.newCameraPosition(
-                      CameraPosition(
-                        target: LatLng(
-                          widget.currentLocation!.latitude!,
-                          widget.currentLocation!.longitude!,
-                        ),
-                        zoom: 15.0,
-                      ),
-                    ),
-                  );
-                }
-              },
-              backgroundColor: Theme.of(context).primaryColor,
-              child: const Icon(Icons.my_location, color: Colors.white),
-            )
-          : null,
+      // Removed the custom FloatingActionButton since Google Maps provides its own location button
     );
   }
 }

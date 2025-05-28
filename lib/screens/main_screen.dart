@@ -100,56 +100,26 @@ class _MainScreenState extends State<MainScreen> {
     });
   }
 
-  // Manual refresh location - quick and automatic
+  // Manual refresh location - silent refresh without showing messages
   Future<void> _refreshLocation() async {
     try {
       Location location = Location();
       
-      // Get new location without full app reload
+      // Get new location without showing messages
       final locationData = await location.getLocation().timeout(
         const Duration(seconds: 5),
       );
       
-      // Update location and let map screens refresh
+      // Update location silently
       setState(() {
         _currentLocation = locationData;
       });
-      
-      // Show quick feedback
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.my_location, color: Colors.white, size: 16),
-              SizedBox(width: 8),
-              Text('Location updated'),
-            ],
-          ),
-          duration: const Duration(seconds: 2),
-          backgroundColor: Theme.of(context).primaryColor,
-        ),
-      );
       
       print('✅ Location refreshed: ${locationData.latitude}, ${locationData.longitude}');
       
     } catch (e) {
       print('Location refresh failed: $e');
-      // Show error feedback
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.error_outline, color: Colors.white, size: 16),
-              SizedBox(width: 8),
-              Text('Failed to update location'),
-            ],
-          ),
-          duration: Duration(seconds: 2),
-          backgroundColor: Colors.red,
-        ),
-      );
+      // Silently fail - no user notification needed
     }
   }
 
@@ -195,12 +165,13 @@ class _MainScreenState extends State<MainScreen> {
             ),
       floatingActionButton: !_isLoadingLocation && _currentLocation != null
           ? FloatingActionButton(
-              onPressed: _refreshLocation,
+              onPressed: _refreshLocation, // Silent refresh
               backgroundColor: Theme.of(context).primaryColor,
               tooltip: 'Refresh Location',
-              child: const Icon(Icons.my_location, color: Colors.white),
+              child: const Icon(Icons.refresh, color: Colors.white),
             )
           : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat, // Positions FAB to bottom left
     );
   }
 
