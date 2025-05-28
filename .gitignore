@@ -46,6 +46,8 @@ app.*.map.json
 
 # Environment
 .env
+.env.local
+.env.*.local
 
 # Build files
 build/
